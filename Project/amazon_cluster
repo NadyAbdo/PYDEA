@@ -1,0 +1,82 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.svm import SVR
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+import os
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import datasets
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(current_directory, "Files/Europe Sales Records.csv")
+
+def find_hyperparams(base_model, paramgrid, features, targets, cv=5, **kwopts) -> GridSearchCV:
+    model = GridSearchCV(base_model, paramgrid, cv=cv, n_jobs=-1, **kwopts)
+    model.fit(features, targets)
+    return model
+
+def plot_evaluation(ax, model, X_test, y_test, title):
+    x_min, x_max = X_test[:, 0].min() - 1, X_test[:, 0].max() + 1
+    xx = np.arange(x_min, x_max, 0.1).reshape(-1, 1)
+
+    yy = model.predict(xx)
+
+    ax.plot(xx, yy, label='Regression Line', color='blue')
+    ax.scatter(X_test, y_test, label='Actual Data', edgecolors='k', marker='o')
+
+    ax.set_title(title)
+    ax.legend(loc='upper right')
+
+if __name__ == '__main__':
+    # Load CSV file
+    data = pd.read_csv(file_path)  # Replace 'your_file.csv' with your actual file name
+
+    # Extract features and targets
+    X = data[['Units Sold']].values
+    y = data['Total Profit'].values
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    # Create a 2x2 subplot
+    fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+    axs = axs.flatten()
+
+    # KNN
+    knn_param_grid = {'n_neighbors': np.arange(1, 50)}
+    knn_model = find_hyperparams(KNeighborsClassifier(), knn_param_grid, X_train, y_train)
+    knn_accuracy = knn_model.score(X_test, y_test)
+    plot_evaluation(axs[0], knn_model, X_test, y_test, f'KNN - Accuracy: {knn_accuracy:.2f}\n{knn_model.best_params_}')
+
+    # SVM with linear kernel
+    svm_linear_param_grid = {'C': [0.1, 1, 10], 'kernel': ['linear']}
+    svm_linear_model = find_hyperparams(SVC(), svm_linear_param_grid, X_train, y_train)
+    svm_linear_accuracy = svm_linear_model.score(X_test, y_test)
+    plot_evaluation(axs[1], svm_linear_model, X_test, y_test, f'SVM Linear - Accuracy: {svm_linear_accuracy:.2f}\n{svm_linear_model.best_params_}')
+
+    # SVM with polynomial kernel
+    svm_poly_param_grid = {'C': [0.1, 1, 10], 'coef0': np.arange(1, 5), 'degree': np.arange(2, 6), 'kernel': ['poly']}
+    svm_poly_model = find_hyperparams(SVC(), svm_poly_param_grid, X_train, y_train)
+    svm_poly_accuracy = svm_poly_model.score(X_test, y_test)
+    plot_evaluation(axs[2], svm_poly_model, X_test, y_test, f'SVM Polynomial - Accuracy: {svm_poly_accuracy:.2f}\n{svm_poly_model.best_params_}')
+
+    # SVM with radial basis function (RBF) kernel
+    svm_rbf_param_grid = {'C': [0.1, 1, 10], 'kernel': ['rbf']}
+    svm_rbf_model = find_hyperparams(SVC(), svm_rbf_param_grid, X_train, y_train)
+    svm_rbf_accuracy = svm_rbf_model.score(X_test, y_test)
+    plot_evaluation(axs[3], svm_rbf_model, X_test, y_test, f'SVM RBF - Accuracy: {svm_rbf_accuracy:.2f}\n{svm_rbf_model.best_params_}')
+
+    # Adjust layout for better visualization
+    plt.tight_layout()
+    plt.show()
